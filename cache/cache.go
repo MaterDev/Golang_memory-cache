@@ -44,3 +44,10 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	c.stats.IncrementHits()
 	return item.Value, true
 }
+
+// Will delete key from map and increment deletes
+func (c *Cache) Delete(key string) {
+	// Will delete a specified key from a map
+	delete(c.items, key)
+	c.stats.IncrementDeletes()
+}

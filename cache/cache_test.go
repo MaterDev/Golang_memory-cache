@@ -102,3 +102,27 @@ func TestGet(t *testing.T) {
 		t.Errorf("Expected misses stat to be 2, got %d", c.stats.GetStats()["misses"])
 	}
 }
+
+// Will test removal of a key from c.items. Will increment deletes counter
+func TestDelete(t *testing.T) {
+	c := NewCache()
+	key := "test_key"
+	value := "test_value"
+	duration := time.Minute
+	
+	// Set a key
+	c.Set(key, value, duration)
+
+	// Delete the key
+	c.Delete(key)
+
+	// Try to retrieve the deleted key
+	_, found := c.Get(key)
+	if found {
+		t.Error("Expected key to be deleted")
+	}
+	if c.stats.GetStats()["deletes"] != 1 {
+		t.Errorf("Expected deletes stat to be 1, got %d", c.stats.GetStats()["deletes"])
+	}
+
+}
