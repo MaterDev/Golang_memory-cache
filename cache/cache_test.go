@@ -58,3 +58,47 @@ func TestSet(t *testing.T) {
 		t.Errorf("Expected sets stat to be 1, got %d", c.stats.GetStats()["sets"])
 	}
 }
+
+
+// Will test Getter for Cache
+func TestGet(t *testing.T) {
+	c := NewCache()
+	key := "test_key"
+	value := "test_value"
+	duration := time.Minute
+
+	// Testing to get non-existent key from cache.
+	_, found := c.Get(key)
+
+	if found {
+		t.Error("Expected key not to be found")
+	}
+	if c.stats.GetStats()["misses"] != 1 {
+		;t.Errorf("Expected misses stat to be 1, got %d", c.stats.GetStats()["misses"])
+	}
+
+	// Set key and test get
+	c.Set(key, value, duration)
+	retrievedValue, found := c.Get(key)
+	
+	if !found {
+		t.Error("Expected key to be found")
+	}
+	if retrievedValue != value {
+		t.Errorf("Expected value %v, got %v", value, retrievedValue)
+	}
+	if c.stats.GetStats()["hits"] != 1 {
+		t.Errorf("Expected hits stat to be 1, got %d", c.stats.GetStats()["hits"])
+	}
+
+	// Test expired item (with a negative duration)
+	c.Set(key, value, -time.Second)
+	_, found = c.Get(key)
+	if found {
+		t.Error("Expected expired key not to be found")
+	}
+	// Expect misses to be 2, because it includes the first test assertion for non-existent keys from cache.
+	if c.stats.GetStats()["misses"] != 2 {
+		t.Errorf("Expected misses stat to be 2, got %d", c.stats.GetStats()["misses"])
+	}
+}

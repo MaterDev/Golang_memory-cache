@@ -1,5 +1,7 @@
 package cache
 
+import "time"
+
 // Represents a single item in the cache
 type CacheItem struct {
 	Value		interface{}
@@ -20,4 +22,25 @@ func NewCache() *Cache {
 		items: make(map[string]CacheItem), // Initialize an empty map for cache items
 		stats: NewStats(), // New Stats object to track cache perations.
 	}
+}
+
+// Retireve from cache.items the value for the incoming key and whether it was found. If not found will give (nil, false)
+	// when something is not found, will increment misses
+	// when something is found, will increment hits
+	// If item is expired, will return (nil,false) AND count as a miss
+func (c *Cache) Get(key string) (interface{}, bool) {
+	item, found := c.items[key]
+
+	if !found {
+		c.stats.IncrementMisses()
+		return nil, false
+	}
+
+	if time.Now().UnixNano() > item.Expiration {
+		c.stats.IncrementMisses()
+		return nil, false
+	}
+
+	c.stats.IncrementHits()
+	return item.Value, true
 }
