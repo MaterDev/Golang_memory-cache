@@ -126,3 +126,92 @@ func TestDelete(t *testing.T) {
 	}
 
 }
+
+// Will test method that deletes cached data which has expired
+func TestDeleteExpired(t *testing.T) {
+	c := NewCache()
+	// Expiration will be set as a second before current time.
+	c.Set("expired1", "value1", -time.Second)
+	c.Set("expired2", "value2", -time.Second)
+	// Expiration will be set as a minute after current time.
+	c.Set("valid", "value3", time.Minute)
+
+	c.deleteExpired()
+
+	// At the time of the if condition running, we use GET method to attempt retrieval of the data and then run our condition based on whether the data is falsy
+	if _, found := c.Get("expired1"); found {
+		t.Error("Expected expired1 to be deleted")
+	}
+	if _, found := c.Get("expired2"); found {
+		t.Error("Expected expired2 to be deleted")
+	}
+	if _, found := c.Get("valid"); !found {
+		t.Error("Expected valid to still exist.")
+	}
+
+	// Test if expirations has increased for every expired item has been deleted.
+	stats := c.stats.GetStats()
+	if stats["expirations"] != 2 {
+		t.Errorf("Expected expirations stat to be 2, got %d", stats["expirations"])
+	}
+}
+
+// Te
+func TestJanitor(t *testing.T) {
+	c := NewCache()
+	c.Set("key1", "value1", 2*time.Second)
+	c.Set("key2", "value2", 5*time.Second)
+
+	// Wait for the first item to expire, leave the second
+	time.Sleep(3 * time.Second)
+
+	// Check if k1 is gone and key2 remains
+	if _, found := c.Get("key1"); found {
+		t.Error("Expected key1 to be deleted by janitor")
+	}
+	if _, found := c.Get("key2"); !found {
+		t.Error("Expected key2 to remain")
+	}
+
+	// Wait additional 3 seconds, for key 2 to 	expire
+	time.Sleep(3 * time.Second)
+
+	// Check if key2 is gone
+	if _, found := c.Get("key2"); found {
+		t.Error("Expected key2 to be deleted by janitor")
+	}
+
+	// Stats must be 2
+	stats := c.stats.GetStats()
+	if stats["expirations"] != 2 {
+		t.Errorf("Expected expirations stat to be 2, got %d", stats["expirations"])
+	}
+
+	// Stop the janitor
+	c.Stop()
+}
+
+// Will test that janitor stops when c.Stop() is called
+func TestStopJanitor(t *testing.T) {
+	c := NewCache()
+	c.Set("key", "value", 1*time.Second)
+
+	// Stop the janitor immediately
+	c.Stop()
+
+	// Wait 2 seconds for the created item to expire
+	time.Sleep(2*time.Second)
+
+	// If item is not there, will error
+	if _, found := c.Get("key"); !found {
+		t.Error("Expected key to still exist after stopping janitor")
+	}
+
+	// Manually try to delete expired item
+	c.deleteExpired()
+
+	// Item should still exist because deleteExpired respects the janitor running flag
+	if _, found := c.Get("key"); !found {
+		t.Error("Expected key to still exist after manual deletion")
+	}
+}

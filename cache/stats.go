@@ -2,7 +2,6 @@ package cache
 
 import (
 	"sync/atomic" // Provides atomic operations for synchronization, for thread-safe counter increments and reads.
-	"time"
 )
 
 // Stats will hold counters for various operations.
@@ -43,20 +42,4 @@ func (s *Stats) GetStats() map[string]uint64 {
 		"deletes":		atomic.LoadUint64(&s.Deletes),
 		"expirations":	atomic.LoadUint64(&s.Expirations),
 	}
-}
-
-// Will set
-	// expiration, to time.Now() plus incoming duration
-	// add a new key to c.items and assign it to a new CacheItem, which has fields to hold incoming value and expiration.
-		// ? interface{} type is like "any" type in TS, it is used when the type can be anything.
-	// Then will increment stats
-func (c *Cache) Set(key string, value interface{}, duration time.Duration) {
-	expiration := time.Now().Add(duration).UnixNano()
-
-	c.items[key] = CacheItem{
-		Value: value,
-		Expiration: expiration,
-	}
-
-	c.stats.IncrementSets()
 }
