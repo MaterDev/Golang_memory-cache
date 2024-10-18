@@ -134,3 +134,50 @@ func TestDeleteHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code for non-existent key: got %v, expected: %v", status, http.StatusOK)
 	}
 }
+
+func TestStatsHandler(t *testing.T) {
+	// Create new cache and handler
+	c := cache.NewCache()
+	h := &Handler{Cache: c}
+
+	// Set test item to be in cache
+	c.Set("key1", "value1", time.Minute) // IncrementSet, when something is added
+	c.Get("key1") // IncrementMit, when something is found
+	c.Get("nonexistent") // IncrementMiss, When something is not found
+	c.Delete("key1") // IncrementDelete, when something is removed
+
+
+	// Create new GET request to /stats
+	req, err := http.NewRequest("GET", "/stats", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(h.StatsHandler)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v, expected %v", status, http.StatusOK)
+	}
+
+	// Parse the response body
+	var stats map[string]uint64
+	if err := json.Unmarshal(rr.Body.Bytes(), &stats); err != nil {
+		t.Fatalf("Failed to parse response body: %v", err)
+	}
+
+	// Check if stats are correct
+	expectedStats := map[string]uint64{
+		"hits":			1,
+		"misses":		1,
+		"sets":			1,
+		"deletes":		1,
+	}
+
+	for key, expectedValue := range expectedStats {
+		if value, exists := stats[key]; !exists || value != expectedValue {
+			t.Errorf("Unexpected value for %s: got %d, expected %d", key, value, expectedValue)
+		}
+	}
+}

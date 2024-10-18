@@ -107,5 +107,18 @@ func (h *Handler) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func (h *Handler) StatsHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	// Get the stats from the cache
+	stats := h.Cache.GetStats()
+
+	// Set the content-type header
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode the stats as JSON and write it to the response writer
+	if err := json.NewEncoder(w).Encode(stats); err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
+
+	// If code reaches the end, that means we've successfully written
+	// Default 200 OK status
 }
